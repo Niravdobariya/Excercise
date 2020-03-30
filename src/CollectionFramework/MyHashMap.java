@@ -127,7 +127,7 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
         return node.getValue();
     }
 
-    final Node<K, V> getNode(K key) {
+    final Node<K, V> getNode(Object key) {
         int id = hash(key) % capacity;
 
         Node<K, V> cur = bucket[id];
@@ -188,27 +188,6 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
         }
     }
 
-    final void putMapEntries(Map<? extends K, ? extends V> m) {
-        int s = m.size();
-        if (s > 0) {
-            if (bucket == null) {
-                float expectedCapacity = (float) s / loadFactor;
-                int t = (expectedCapacity < (float) MAXIMUM_CAPACITY) ? (int) expectedCapacity : MAXIMUM_CAPACITY;
-                if (t > threshold) {
-                    threshold = bucketOfSize(t);
-                }
-            } else if (threshold < s) {
-                resize();
-            }
-            for (Map.Entry<? extends K, ? extends V> mapEntry : m.entrySet()) {
-                K key = mapEntry.getKey();
-                V value = mapEntry.getValue();
-                putNode(new Node<>(hash(key), key, value, null));
-            }
-        }
-
-    }
-
     /* To view the bucket */
     final public void display() {
         for (int i = 0; i < capacity; i++) {
@@ -245,14 +224,24 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
 
     @Override
     public boolean containsKey(Object key) {
-        return false;
+        return (getNode(key) != null);
     }
 
     @Override
     public boolean containsValue(Object value) {
+        if (value == null) return false;
+        Node<K, V>[] b = bucket;
+        for (int i = 0; i < capacity; i++) {
+            Node<K, V> cur = b[i];
+            while (cur != null) {
+                if (cur.value.equals(value)) {
+                    return true;
+                }
+                cur = cur.next;
+            }
+        }
         return false;
     }
-
 
     @Override
     public V put(K key, V value) {
@@ -268,7 +257,6 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
 
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
-        putMapEntries(m);
     }
 
     @Override
