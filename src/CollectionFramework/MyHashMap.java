@@ -26,7 +26,6 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
             this.value = val;
             this.hash = hash;
             this.next = next;
-
         }
 
         public K getKey() {
@@ -41,7 +40,6 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
             this.value = value;
             return this.value;
         }
-        
     }
 
     public MyHashMap(int initialCapacity, float loadFactor) {
@@ -228,12 +226,12 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
     public V put(K key, V value) {
         return putNode(new Node<K, V>(hash(key), key, value, null));
     }
-
-
+    
     @Override
     public V remove(Object key) {
         Node<K, V> e;
-        return ((e = removeNode(hash(key), (K) key, null, false))) == null ? null : e.value;
+        e = removeNode(hash(key), (K) key, null, false);
+        return (e == null) ? null : e.value;
     }
 
     @Override
@@ -249,5 +247,4 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
     public Set<Entry<K, V>> entrySet() {
         return null;
     }
-
 }
