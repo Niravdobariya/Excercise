@@ -41,26 +41,7 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
             this.value = value;
             return this.value;
         }
-
-        @Override
-        public int hashCode() {
-            return (key.hashCode() ^ value.hashCode());
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == this) return true;
-            if (obj == null || !(obj instanceof Map.Entry)) return false;
-            Node<K, V> e = (Node<K, V>) obj;
-            if ((e.getKey() == key) && (e.getValue() == value)) return true;
-            return false;
-        }
-
-        public String toString() {
-            return key + " = " + value;
-        }
-
-
+        
     }
 
     public MyHashMap(int initialCapacity, float loadFactor) {
@@ -270,4 +251,3 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
     }
 
 }
-
