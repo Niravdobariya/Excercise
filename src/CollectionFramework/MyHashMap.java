@@ -1,81 +1,54 @@
-package CollectionFramework;
+import java.util.*;
+import java.util.function.Consumer;
 
-import java.util.AbstractMap;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
+public class MyHashMap<K, V> implements Map<K, V> {
 
-public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
-    final int INITIAL_CAPACITY = 1 << 4;
-    final float DEFAULT_LOAD_FACTOR = 0.75f;
-    final int MAXIMUM_CAPACITY = 1 << 30;
-    int size;
-    float loadFactor;
-    int threshold;
-    int capacity = 1 << 4;
-    int modCount;
+    final static int INITIAL_CAPACITY = 10;
+    final static float DEFAULT_LOAD_FACTOR = 0.75F;
+    final static int MAXIMUM_CAPACITY = 1 << 30;
 
     private class Node<K, V> implements Map.Entry<K, V> {
-        int hash;
-        final K key;
-        V value;
+        private final K key;
+        private V value;
         Node<K, V> next;
 
-        Node(int hash, K key, V val, Node<K, V> next) {
+        public Node(K key, V value, Node<K, V> next) {
             this.key = key;
-            this.value = val;
-            this.hash = hash;
+            this.value = value;
             this.next = next;
         }
 
+        @Override
         public K getKey() {
             return key;
         }
 
+        @Override
         public V getValue() {
             return value;
         }
 
+        @Override
         public V setValue(V value) {
             this.value = value;
-            return this.value;
+            return value;
         }
     }
 
-    public MyHashMap(int initialCapacity, float loadFactor) {
-        this.loadFactor = loadFactor;
-        this.threshold = bucketOfSize(initialCapacity);
-        capacity = initialCapacity;
-        bucket = (Node<K, V>[]) new Node[initialCapacity];
-    }
-
-    public MyHashMap(int initialCapacity) {
-        this.threshold = bucketOfSize(initialCapacity);
-        this.loadFactor = DEFAULT_LOAD_FACTOR;
-        bucket = (Node<K, V>[]) new Node[initialCapacity];
-        capacity = initialCapacity;
-    }
-
-    public MyHashMap() {
-        bucket = (Node<K, V>[]) new Node[INITIAL_CAPACITY];
-        this.threshold = bucketOfSize(INITIAL_CAPACITY);
-    }
-
+    private int capacity;
+    private float loadFactor;
     private Node<K, V>[] bucket;
-    private Set<Map.Entry<K, V>> entrySet;
-    private Set<K> keys;
-    private Collection<V> values;
+    private int size = 0;
+    int modCount = 0;
+
+    MyHashMap() {
+        capacity = INITIAL_CAPACITY;
+        loadFactor = DEFAULT_LOAD_FACTOR;
+        bucket = (Node<K, V>[]) new Node[capacity];
+    }
 
     static final int hash(Object key) {
         return (key == null) ? 0 : key.hashCode();
-    }
-
-    final int bucketOfSize(int n) {
-        int ret = 1;
-        while (ret < n) {
-            ret = ret << 1;
-        }
-        return (ret <= 0) ? 1 : (ret < MAXIMUM_CAPACITY) ? ret : MAXIMUM_CAPACITY;
     }
 
     final V putNode(Node<K, V> node) {
@@ -99,20 +72,21 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
         }
 
         cur.next = node;
-        modCount++;
-        if (++size > threshold) {
-            resize();
+        size++;
+        if (size > capacity * loadFactor) {
+            reHash();
         }
-        return node.getValue();
+        return node.value;
     }
 
     final Node<K, V> getNode(Object key) {
+        if (bucket == null) {
+            return null;
+        }
         int id = hash(key) % capacity;
-
         Node<K, V> cur = bucket[id];
-
         while (cur != null) {
-            if (key.equals(cur.getKey())) {
+            if (key.equals(cur.key)) {
                 return cur;
             }
             cur = cur.next;
@@ -120,8 +94,8 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
         return null;
     }
 
-    final Node<K, V> removeNode(int hash, K key, V value, boolean matchValue) {
-        int id = hash % capacity;
+    final Node<K, V> removeNode(Object key) {
+        int id = hash(key) % capacity;
         if (bucket == null) return null;
         Node<K, V> cur = bucket[id];
         if (cur.key.equals(key)) {
@@ -130,30 +104,21 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
         }
         while (cur.next != null) {
             if (cur.next.key.equals(key)) {
-                boolean flag = true;
-                if (matchValue) {
-                    if (!cur.next.value.equals(value)) flag = false;
-                }
-                if (flag) {
-                    V ret = cur.next.value;
-                    cur.next = cur.next.next;
-                    size--;
-                    return cur;
-                }
-                return null;
+                V ret = cur.next.value;
+                cur.next = cur.next.next;
+                size--;
+                return cur;
             }
         }
         return null;
     }
 
-    final void resize() {
+    private void reHash() {
         int oldCapacity = capacity;
         capacity *= 2;
         if (capacity > MAXIMUM_CAPACITY) {
             capacity = MAXIMUM_CAPACITY;
         }
-
-        threshold = bucketOfSize(capacity);
         Node<K, V>[] oldBucket = bucket;
         bucket = (Node<K, V>[]) new Node[capacity];
         Node<K, V> cur;
@@ -161,23 +126,11 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
         for (int id = 0; id < oldCapacity; id++) {
             cur = oldBucket[id];
             while (cur != null) {
-                putNode(new Node(hash(cur.getKey()), cur.getKey(), cur.getValue(), null));
+                putNode(new Node(cur.key, cur.value, null));
                 cur = cur.next;
             }
         }
-    }
 
-    /* To view the bucket */
-    final public void display() {
-        for (int i = 0; i < capacity; i++) {
-            Node<K, V> e = bucket[i];
-            System.out.print(i + " :");
-            while (e != null) {
-                System.out.print(" ( " + e.toString() + " )");
-                e = e.next;
-            }
-            System.out.println();
-        }
     }
 
     @Override
@@ -187,18 +140,7 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
 
     @Override
     public boolean isEmpty() {
-        return (size == 0);
-    }
-
-    @Override
-    public V get(Object key) {
-        K k = (K) key;
-        Node<K, V> v;
-
-        if ((v = getNode(k)) == null) {
-            return null;
-        }
-        return v.getValue();
+        return (size == 0 ? true : false);
     }
 
     @Override
@@ -223,28 +165,232 @@ public class MyHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
     }
 
     @Override
-    public V put(K key, V value) {
-        return putNode(new Node<K, V>(hash(key), key, value, null));
+    public V get(Object key) {
+        Node<K, V> v;
+        if ((v = getNode(key)) == null) {
+            return null;
+        }
+        return v.value;
     }
-    
+
+    @Override
+    public V put(K key, V value) {
+        return putNode(new Node<K, V>(key, value, null));
+    }
+
     @Override
     public V remove(Object key) {
-        Node<K, V> e;
-        e = removeNode(hash(key), (K) key, null, false);
-        return (e == null) ? null : e.value;
+        Node<K, V> node = removeNode(key);
+        if (node == null) {
+            return null;
+        }
+        return node.value;
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
+        Set<? extends Entry<? extends K, ? extends V>> entries = m.entrySet();
+        for (Map.Entry<? extends K, ? extends V> entry : entries) {
+            put(entry.getKey(), entry.getValue());
+        }
     }
 
     @Override
     public void clear() {
-
+        size = 0;
+        capacity = INITIAL_CAPACITY;
+        bucket = (Node<K, V>[]) new Node[capacity];
     }
 
     @Override
-    public Set<Entry<K, V>> entrySet() {
-        return null;
+    public Set<K> keySet() {
+        return new KeySet();
     }
+
+    @Override
+    public Collection<V> values() {
+        return new ValueCollection();
+    }
+
+
+
+    @Override
+    public Set<Entry<K, V>> entrySet() {
+        return new EntrySet();
+    }
+
+    abstract class HashCollection {
+
+        public int size() { return size; }
+
+        public abstract Iterator iterator();
+
+        public boolean isEmpty() { return size == 0; }
+
+        public boolean contains(Object o) { return false; }
+
+        public Object[] toArray() { Object[] ret = new Object[size];
+            Iterator itr = iterator();
+            for (int i = 0; i < size(); i++) {
+                if (itr.hasNext()) {
+                    ret[i] = itr.next();
+                }
+            }
+            return ret;
+
+        }
+
+        public <T> T[] toArray(T[] a) { return null; }
+
+        public boolean containsAll(Collection<?> c) { return false; }
+
+        public boolean retainAll(Collection<?> c) { return false; }
+
+        public boolean removeAll(Collection<?> c) { return false; }
+
+        public void clear() { MyHashMap.this.clear(); }
+
+    }
+
+    final class KeySet extends HashCollection implements Set<K> {
+
+        public Iterator<K> iterator() { return new KeySetIterator(); }
+        public boolean contains(Object o) { return containsKey(o); }
+        public boolean add(K k) { return false; }
+        public boolean addAll(Collection<? extends K> c) { return false; }
+
+        public boolean remove(Object o) {
+            if (o instanceof Map.Entry)
+                return MyHashMap.this.remove(o) != null;
+            return false;
+        }
+
+        public void forEach(Consumer<? super K> action) {
+            Iterator<K>itr = iterator();
+            while(itr.hasNext()) {
+                K k = itr.next();
+                action.accept(k);
+            }
+        }
+
+    }
+
+    final class ValueCollection extends HashCollection implements Collection<V> {
+
+        public Iterator<V> iterator() { return new ValuesIterator(); }
+        public boolean contains(Object o) { return containsValue(o); }
+        public boolean add(V v) { return false; }
+        public boolean addAll(Collection<? extends V> c) { return false; }
+        public boolean remove(Object o) { return false; }
+
+        public void forEach(Consumer<? super V> action) {
+            for(V value : this) {
+                action.accept(value);
+            }
+        }
+
+
+    }
+
+    final class EntrySet extends HashCollection implements Set<Map.Entry<K,V>> {
+
+        public Iterator<Entry<K, V>> iterator() { return new EntrySetIterator(); }
+        public boolean add(Entry<K, V> kvEntry) { return false; }
+        public boolean addAll(Collection<? extends Entry<K, V>> c) { return false; }
+
+        public boolean remove(Object o) {
+            if (o instanceof Map.Entry)
+                return removeNode(o) != null;
+            return false;
+        }
+
+        public void forEach(Consumer<? super Entry<K, V>> action) {
+            for(Map.Entry<K,V> entry : this) {
+                action.accept(entry);
+            }
+        }
+    }
+
+    //-------------------------------Iterators-------------------------------//
+
+    abstract class HashIterator {
+        Node<K, V> current;
+        Node<K, V> next;
+        int expectedModCount;
+        int index;
+
+        HashIterator() {
+            expectedModCount = modCount;
+            index = -1;
+            next = null;
+            current = null;
+            while(++index < capacity) {
+                if(bucket[index] != null) {
+                    next = bucket[index];
+                    break;
+                }
+            }
+        }
+
+        void findNext() {
+            checkModificationCondition();
+            if (next == null) {
+                throw new IllegalStateException();
+            }
+            current = next;
+            if (next.next != null) {
+                next = next.next;
+            } else {
+                while (++index < capacity && bucket[index] == null) {
+                }
+                if (index == capacity) {
+                    next = null;
+                } else {
+                    next = bucket[index];
+                }
+            }
+        }
+
+        public boolean hasNext() {
+            return next != null;
+        }
+
+        public void remove() {
+            checkModificationCondition();
+            removeNode(current.getKey());
+            expectedModCount = modCount;
+        }
+
+        private void checkModificationCondition() {
+            if (expectedModCount != modCount) {
+                throw new ConcurrentModificationException();
+            }
+        }
+    }
+
+    class EntrySetIterator extends HashIterator implements Iterator<Map.Entry<K, V>> {
+        @Override
+        public Map.Entry<K, V> next() {
+            findNext();
+            return current;
+        }
+    }
+
+    class KeySetIterator extends HashIterator implements Iterator<K> {
+        @Override
+        public K next() {
+            findNext();
+            return current.getKey();
+        }
+    }
+
+    class ValuesIterator extends HashIterator implements Iterator<V> {
+        @Override
+        public V next() {
+            findNext();
+            return current.getValue();
+        }
+    }
+
+
 }
