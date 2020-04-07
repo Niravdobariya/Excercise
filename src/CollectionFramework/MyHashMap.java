@@ -1,5 +1,4 @@
 import java.util.*;
-import java.util.function.Consumer;
 
 public class MyHashMap<K, V> implements Map<K, V> {
 
@@ -8,11 +7,13 @@ public class MyHashMap<K, V> implements Map<K, V> {
     final static int MAXIMUM_CAPACITY = 1 << 30;
 
     private class Node<K, V> implements Map.Entry<K, V> {
-        private final K key;
-        private V value;
+        final int hash;
+        final K key;
+        V value;
         Node<K, V> next;
 
-        public Node(K key, V value, Node<K, V> next) {
+        public Node(int hash, K key, V value, Node<K, V> next) {
+            this.hash = hash;
             this.key = key;
             this.value = value;
             this.next = next;
@@ -52,8 +53,7 @@ public class MyHashMap<K, V> implements Map<K, V> {
     }
 
     final V putNode(Node<K, V> node) {
-        int id = node.key.hashCode();
-        id = id % capacity;
+        int id = node.hash % capacity;
         Node<K, V> cur = bucket[id];
         if (cur == null) {
             bucket[id] = node;
@@ -126,7 +126,7 @@ public class MyHashMap<K, V> implements Map<K, V> {
         for (int id = 0; id < oldCapacity; id++) {
             cur = oldBucket[id];
             while (cur != null) {
-                putNode(new Node(cur.key, cur.value, null));
+                putNode(new Node(cur.hash, cur.key, cur.value, null));
                 cur = cur.next;
             }
         }
@@ -175,7 +175,7 @@ public class MyHashMap<K, V> implements Map<K, V> {
 
     @Override
     public V put(K key, V value) {
-        return putNode(new Node<K, V>(key, value, null));
+        return putNode(new Node<K, V>(hash(key), key, value, null));
     }
 
     @Override
@@ -208,16 +208,36 @@ public class MyHashMap<K, V> implements Map<K, V> {
     }
 
     @Override
-    public Collection<V> values() {
-        return new ValueCollection();
+    public Collection<V> values() { return new ValueCollection(); }
+
+    @Override
+    public boolean equals(Object o) {
+        if(o == null) return false;
+        if(o instanceof Map) {
+            Map<K, V> map = (Map<K, V>) o;
+            Set<Map.Entry<K, V>> entries = map.entrySet();
+            for(Map.Entry<K, V> entry : entries) {
+                if(get(entry.getKey()) != entry.getValue()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
+    @Override
+    public int hashCode() {
 
+        return 0;
+    }
 
     @Override
     public Set<Entry<K, V>> entrySet() {
         return new EntrySet();
     }
+
+    //-------------------------------Collections------------------------------//
 
     abstract class HashCollection {
 
@@ -226,8 +246,6 @@ public class MyHashMap<K, V> implements Map<K, V> {
         public abstract Iterator iterator();
 
         public boolean isEmpty() { return size == 0; }
-
-        public boolean contains(Object o) { return false; }
 
         public Object[] toArray() { Object[] ret = new Object[size];
             Iterator itr = iterator();
@@ -297,6 +315,15 @@ public class MyHashMap<K, V> implements Map<K, V> {
         public Iterator<Entry<K, V>> iterator() { return new EntrySetIterator(); }
         public boolean add(Entry<K, V> kvEntry) { return false; }
         public boolean addAll(Collection<? extends Entry<K, V>> c) { return false; }
+        public boolean contains(Object o) {
+            if(o instanceof Map.Entry) {
+                Map.Entry<K, V> entry = (Entry<K, V>) o;
+                if(get(entry.getKey()) == entry.getValue()) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         public boolean remove(Object o) {
             if (o instanceof Map.Entry)
