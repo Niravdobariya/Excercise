@@ -1,4 +1,5 @@
 import java.util.*;
+import java.util.function.Consumer;
 
 public class MyHashMap<K, V> implements Map<K, V> {
 
@@ -226,9 +227,9 @@ public class MyHashMap<K, V> implements Map<K, V> {
         return false;
     }
 
+    // TODO
     @Override
     public int hashCode() {
-
         return 0;
     }
 
@@ -258,13 +259,41 @@ public class MyHashMap<K, V> implements Map<K, V> {
 
         }
 
+        //TODO
         public <T> T[] toArray(T[] a) { return null; }
 
-        public boolean containsAll(Collection<?> c) { return false; }
+        public abstract boolean contains(Object o);
 
-        public boolean retainAll(Collection<?> c) { return false; }
+        public boolean containsAll(Collection<?> c) {
+            for(Object o : c) {
+                if(!contains(o)) {
+                    return false;
+                }
+            }
+            return true;
+        }
 
-        public boolean removeAll(Collection<?> c) { return false; }
+        //TODO
+        public boolean retainAll(Collection<?> c) {
+            Iterator itr = iterator();
+            while(itr.hasNext()) {
+                if(!c.contains(itr.next())) {
+                    itr.remove();
+                }
+            }
+            return true;
+        }
+
+        public abstract boolean remove(Object o);
+
+        public boolean removeAll(Collection<?> c) {
+            for(Object o : c) {
+                if(remove(o)) {
+                    return false;
+                }
+            }
+            return true;
+        }
 
         public void clear() { MyHashMap.this.clear(); }
 
@@ -418,6 +447,5 @@ public class MyHashMap<K, V> implements Map<K, V> {
             return current.getValue();
         }
     }
-
 
 }
