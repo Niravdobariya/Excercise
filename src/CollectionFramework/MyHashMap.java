@@ -74,6 +74,7 @@ public class MyHashMap<K, V> implements Map<K, V> {
 
         cur.next = node;
         size++;
+        modCount++;
         if (size > capacity * loadFactor) {
             reHash();
         }
@@ -100,11 +101,13 @@ public class MyHashMap<K, V> implements Map<K, V> {
         if (bucket == null) return null;
         Node<K, V> cur = bucket[id];
         if (cur.key.equals(key)) {
+            modCount++;
             bucket[id] = bucket[id].next;
             return cur;
         }
         while (cur.next != null) {
             if (cur.next.key.equals(key)) {
+                modCount++;
                 V ret = cur.next.value;
                 cur.next = cur.next.next;
                 size--;
