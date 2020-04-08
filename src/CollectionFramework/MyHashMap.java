@@ -1,3 +1,5 @@
+package CollectionFramework;
+
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -212,16 +214,18 @@ public class MyHashMap<K, V> implements Map<K, V> {
     }
 
     @Override
-    public Collection<V> values() { return new ValueCollection(); }
+    public Collection<V> values() {
+        return new ValueCollection();
+    }
 
     @Override
     public boolean equals(Object o) {
-        if(o == null) return false;
-        if(o instanceof Map) {
+        if (o == null) return false;
+        if (o instanceof Map) {
             Map<K, V> map = (Map<K, V>) o;
             Set<Map.Entry<K, V>> entries = map.entrySet();
-            for(Map.Entry<K, V> entry : entries) {
-                if(get(entry.getKey()) != entry.getValue()) {
+            for (Map.Entry<K, V> entry : entries) {
+                if (get(entry.getKey()) != entry.getValue()) {
                     return false;
                 }
             }
@@ -241,150 +245,21 @@ public class MyHashMap<K, V> implements Map<K, V> {
         return new EntrySet();
     }
 
-    //-------------------------------Collections------------------------------//
-
-    abstract class HashCollection {
-
-        public int size() { return size; }
-
-        public abstract Iterator iterator();
-
-        public boolean isEmpty() { return size == 0; }
-
-        public Object[] toArray() { Object[] ret = new Object[size];
-            Iterator itr = iterator();
-            for (int i = 0; i < size(); i++) {
-                if (itr.hasNext()) {
-                    ret[i] = itr.next();
-                }
-            }
-            return ret;
-
-        }
-
-        //TODO
-        public <T> T[] toArray(T[] a) { return null; }
-
-        public abstract boolean contains(Object o);
-
-        public boolean containsAll(Collection<?> c) {
-            for(Object o : c) {
-                if(!contains(o)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        //TODO
-        public boolean retainAll(Collection<?> c) {
-            Iterator itr = iterator();
-            while(itr.hasNext()) {
-                if(!c.contains(itr.next())) {
-                    itr.remove();
-                }
-            }
-            return true;
-        }
-
-        public abstract boolean remove(Object o);
-
-        public boolean removeAll(Collection<?> c) {
-            for(Object o : c) {
-                if(remove(o)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        public void clear() { MyHashMap.this.clear(); }
-
-    }
-
-    final class KeySet extends HashCollection implements Set<K> {
-
-        public Iterator<K> iterator() { return new KeySetIterator(); }
-        public boolean contains(Object o) { return containsKey(o); }
-        public boolean add(K k) { return false; }
-        public boolean addAll(Collection<? extends K> c) { return false; }
-
-        public boolean remove(Object o) {
-            if (o instanceof Map.Entry)
-                return MyHashMap.this.remove(o) != null;
-            return false;
-        }
-
-        public void forEach(Consumer<? super K> action) {
-            Iterator<K>itr = iterator();
-            while(itr.hasNext()) {
-                K k = itr.next();
-                action.accept(k);
-            }
-        }
-
-    }
-
-    final class ValueCollection extends HashCollection implements Collection<V> {
-
-        public Iterator<V> iterator() { return new ValuesIterator(); }
-        public boolean contains(Object o) { return containsValue(o); }
-        public boolean add(V v) { return false; }
-        public boolean addAll(Collection<? extends V> c) { return false; }
-        public boolean remove(Object o) { return false; }
-
-        public void forEach(Consumer<? super V> action) {
-            for(V value : this) {
-                action.accept(value);
-            }
-        }
-
-
-    }
-
-    final class EntrySet extends HashCollection implements Set<Map.Entry<K,V>> {
-
-        public Iterator<Entry<K, V>> iterator() { return new EntrySetIterator(); }
-        public boolean add(Entry<K, V> kvEntry) { return false; }
-        public boolean addAll(Collection<? extends Entry<K, V>> c) { return false; }
-        public boolean contains(Object o) {
-            if(o instanceof Map.Entry) {
-                Map.Entry<K, V> entry = (Entry<K, V>) o;
-                if(get(entry.getKey()) == entry.getValue()) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public boolean remove(Object o) {
-            if (o instanceof Map.Entry)
-                return removeNode(o) != null;
-            return false;
-        }
-
-        public void forEach(Consumer<? super Entry<K, V>> action) {
-            for(Map.Entry<K,V> entry : this) {
-                action.accept(entry);
-            }
-        }
-    }
-
     //-------------------------------Iterators-------------------------------//
 
-    abstract class HashIterator {
+    private abstract class Itr {
         Node<K, V> current;
         Node<K, V> next;
         int expectedModCount;
         int index;
 
-        HashIterator() {
+        Itr() {
             expectedModCount = modCount;
             index = -1;
             next = null;
             current = null;
-            while(++index < capacity) {
-                if(bucket[index] != null) {
+            while (++index < capacity) {
+                if (bucket[index] != null) {
                     next = bucket[index];
                     break;
                 }
@@ -427,27 +302,222 @@ public class MyHashMap<K, V> implements Map<K, V> {
         }
     }
 
-    class EntrySetIterator extends HashIterator implements Iterator<Map.Entry<K, V>> {
-        @Override
-        public Map.Entry<K, V> next() {
-            findNext();
-            return current;
+    //-------------------------------Collections------------------------------//
+
+    private abstract class HashCollection {
+
+        public int size() {
+            return size;
         }
+
+        public abstract Iterator iterator();
+
+        public boolean isEmpty() {
+            return size == 0;
+        }
+
+        public Object[] toArray() {
+            Object[] ret = new Object[size];
+            Iterator itr = iterator();
+            for (int i = 0; i < size(); i++) {
+                if (itr.hasNext()) {
+                    ret[i] = itr.next();
+                }
+            }
+            return ret;
+
+        }
+
+        //TODO
+        public <T> T[] toArray(T[] a) {
+            return null;
+        }
+
+        public abstract boolean contains(Object o);
+
+        public boolean containsAll(Collection<?> c) {
+            for (Object o : c) {
+                if (!contains(o)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        //TODO
+        public boolean retainAll(Collection<?> c) {
+            Iterator itr = iterator();
+            while (itr.hasNext()) {
+                if (!c.contains(itr.next())) {
+                    itr.remove();
+                }
+            }
+            return true;
+        }
+
+        public abstract boolean remove(Object o);
+
+        public boolean removeAll(Collection<?> c) {
+            for (Object o : c) {
+                if (remove(o)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public void clear() {
+            MyHashMap.this.clear();
+        }
+
     }
 
-    class KeySetIterator extends HashIterator implements Iterator<K> {
-        @Override
-        public K next() {
-            findNext();
-            return current.getKey();
+    private class KeySet extends HashCollection implements Set<K> {
+
+        private class KeySetItr extends Itr implements Iterator<K> {
+            @Override
+            public K next() {
+                findNext();
+                return current.getKey();
+            }
         }
+
+        @Override
+        public Iterator<K> iterator() {
+            return new KeySetItr();
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return containsKey(o);
+        }
+
+        @Override
+        public boolean add(K k) {
+            return false;
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends K> c) {
+            return false;
+        }
+
+        @Override
+        public boolean remove(Object o) {
+            if (o instanceof Map.Entry)
+                return MyHashMap.this.remove(o) != null;
+            return false;
+        }
+
+        @Override
+        public void forEach(Consumer<? super K> action) {
+            Iterator<K> itr = iterator();
+            while (itr.hasNext()) {
+                K k = itr.next();
+                action.accept(k);
+            }
+        }
+
     }
 
-    class ValuesIterator extends HashIterator implements Iterator<V> {
+    private class ValueCollection extends HashCollection implements Collection<V> {
+
+        private class ValuesItr extends Itr implements Iterator<V> {
+            @Override
+            public V next() {
+                findNext();
+                return current.getValue();
+            }
+        }
+
         @Override
-        public V next() {
-            findNext();
-            return current.getValue();
+        public Iterator<V> iterator() {
+            return new ValuesItr();
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return containsValue(o);
+        }
+
+        @Override
+        public boolean add(V v) {
+            return false;
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends V> c) {
+            return false;
+        }
+
+        @Override
+        public boolean remove(Object o) {
+            return false;
+        }
+
+        @Override
+        public void forEach(Consumer<? super V> action) {
+            for (V value : this) {
+                action.accept(value);
+            }
+        }
+
+
+    }
+
+    private class EntrySet extends HashCollection implements Set<Map.Entry<K, V>> {
+
+        private class EntrySetItr extends Itr implements Iterator<Map.Entry<K, V>> {
+            @Override
+            public Map.Entry<K, V> next() {
+                findNext();
+                return current;
+            }
+        }
+
+        @Override
+        public Iterator<Entry<K, V>> iterator() {
+            return new EntrySetItr();
+        }
+
+        @Override
+        public boolean add(Entry<K, V> entry) {
+            return put(entry.getKey(), entry.getValue()) != entry.getValue();
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends Entry<K, V>> c) {
+            for (Entry<K, V> entry : c) {
+                if (put(entry.getKey(), entry.getValue()) != entry.getValue()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            if (o instanceof Map.Entry) {
+                Map.Entry<K, V> entry = (Entry<K, V>) o;
+                if (get(entry.getKey()) == entry.getValue()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public boolean remove(Object o) {
+            if (o instanceof Map.Entry)
+                return removeNode(o) != null;
+            return false;
+        }
+
+        @Override
+        public void forEach(Consumer<? super Entry<K, V>> action) {
+            for (Map.Entry<K, V> entry : this) {
+                action.accept(entry);
+            }
         }
     }
 
