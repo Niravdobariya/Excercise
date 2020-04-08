@@ -4,7 +4,7 @@ import java.util.function.Consumer;
 public class MyHashMap<K, V> implements Map<K, V> {
 
     final static int INITIAL_CAPACITY = 10;
-    final static float DEFAULT_LOAD_FACTOR = 0.75F;
+    final static float DEFAULT_LOAD_FACTOR = 1.0F;
     final static int MAXIMUM_CAPACITY = 1 << 30;
 
     private class Node<K, V> implements Map.Entry<K, V> {
