@@ -9,6 +9,12 @@ public class MyHashMap<K, V> implements Map<K, V> {
     final static float DEFAULT_LOAD_FACTOR = 1.0F;
     final static int MAXIMUM_CAPACITY = 1 << 30;
 
+    private int capacity;
+    private float loadFactor;
+    private Node<K, V>[] bucket;
+    private int size = 0;
+    private int modCount = 0;
+
     private class Node<K, V> implements Map.Entry<K, V> {
         final int hash;
         final K key;
@@ -38,13 +44,7 @@ public class MyHashMap<K, V> implements Map<K, V> {
             return value;
         }
     }
-
-    private int capacity;
-    private float loadFactor;
-    private Node<K, V>[] bucket;
-    private int size = 0;
-    int modCount = 0;
-
+    
     MyHashMap() {
         capacity = INITIAL_CAPACITY;
         loadFactor = DEFAULT_LOAD_FACTOR;
@@ -55,7 +55,7 @@ public class MyHashMap<K, V> implements Map<K, V> {
         return (key == null) ? 0 : key.hashCode();
     }
 
-    final V putNode(Node<K, V> node) {
+    private V putNode(Node<K, V> node) {
         int id = node.hash % capacity;
         Node<K, V> cur = bucket[id];
         if (cur == null) {
@@ -83,7 +83,7 @@ public class MyHashMap<K, V> implements Map<K, V> {
         return node.value;
     }
 
-    final Node<K, V> getNode(Object key) {
+    private Node<K, V> getNode(Object key) {
         if (bucket == null) {
             return null;
         }
@@ -98,7 +98,7 @@ public class MyHashMap<K, V> implements Map<K, V> {
         return null;
     }
 
-    final Node<K, V> removeNode(Object key) {
+    private Node<K, V> removeNode(Object key) {
         int id = hash(key) % capacity;
         if (bucket == null) return null;
         Node<K, V> cur = bucket[id];
