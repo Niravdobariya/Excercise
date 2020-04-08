@@ -245,7 +245,7 @@ public class MyHashMap<K, V> implements Map<K, V> {
         return new EntrySet();
     }
 
-    //-------------------------------Iterators-------------------------------//
+    //-------------------------------Iterator-------------------------------//
 
     private abstract class Itr {
         Node<K, V> current;
