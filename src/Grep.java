@@ -1,77 +1,145 @@
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
+
 
 public class Grep {
-    
-    public static void main(String args[]) throws Exception{
+
+    static BufferedWriter bw;
+    public static void main(String args[]) throws Exception {
+
+
         String pattern = args[0];
-        ThreadPoolExecutor poolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
+        long time = System.currentTimeMillis();
+
+        bw = new BufferedWriter(new FileWriter("/Users/niravdobariya/Desktop/output.txt"));
+        ExecutorService poolExecutor = Executors.newFixedThreadPool(2);
         for (int i = 1; i < args.length; i++) {
             try {
-                search(poolExecutor,args[i],pattern);
+                search(poolExecutor, args[i], pattern);
             } catch (IOException e) {
                 System.out.println(e.getCause());
             }
         }
         poolExecutor.shutdown();
         poolExecutor.awaitTermination(10L, TimeUnit.MINUTES);
+        System.out.println(System.currentTimeMillis() - time);
+        bw.flush();
+        bw.close();
     }
 
     //----------------------------Private Methods-----------------------------------//
 
-    public static void search(ThreadPoolExecutor poolExecutor, String path, String regex) throws IOException {
+    private static void search(ExecutorService poolExecutor, String path, String regex) throws IOException {
         File file = new File(path);
         if (!file.exists()) {
             throw new IOException(path + " : No such File or Directory");
         }
         Pattern pattern = new Pattern(regex);
-        searchInDirectory(poolExecutor,file, pattern);
+        int cnt = 0;
+        searchInDirectory(cnt, poolExecutor, file, pattern);
     }
 
-    public static void searchInDirectory(ThreadPoolExecutor poolExecutor,File dir, Pattern pattern) {
+    private static void searchInDirectory(int cnt, ExecutorService poolExecutor, File dir, Pattern pattern) {
         if (dir.isDirectory()) {
             final File[] files = dir.listFiles();
             for (File file : files) {
-                searchInDirectory(poolExecutor,file, pattern);
+                searchInDirectory(cnt + 1, poolExecutor, file, pattern);
             }
         } else {
-            poolExecutor.submit(() -> {
-                if (fileSearch(dir, pattern)) {
-                    System.out.println(dir.getName() + " contains  " + pattern.p);
+            poolExecutor.execute(() -> {
+                try {
+                    if (fileSearch(dir, pattern)) {
+                        //                    System.out.println(dir.getName() + " contains  " + pattern.p);
+                    }
+                } catch (IOException | InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                    System.out.println(dir.getPath() + " : Exception caught during reading File");
                 }
             });
 
         }
     }
 
-    private static boolean fileSearch(File file, Pattern p) {
-        FileReader fr = null;
-        try {
-            fr = new FileReader(file);
-        } catch (IOException e) {
-            System.out.println("File not found : " + file.getName());
-            return false;
-        }
-        BufferedReader br = new BufferedReader(fr);
-        Matcher matcher = p.matcher();
-        char[] buff = new char[1000];
-        while (true) {
+    private static boolean fileSearch(File file, Pattern p) throws IOException, InterruptedException, ExecutionException {
+        int poolSize = 5;
+        ExecutorService poolExecutor = Executors.newFixedThreadPool(poolSize);
+        long chunkSize = 8192;
+        long cnt = (file.length() + chunkSize - 1) / chunkSize;
+        int taskAtTime = 102400;
+        int matchedCount = 0;
+        long start = 0;
+        long end = Long.min(chunkSize, file.length());
+        List<Callable<char[]>> tasks = new ArrayList<>();
+        Matcher m = p.matcher();
+        boolean flag = false;
 
-            int size = 0;
-            try {
-                if ((size = br.read(buff, 0, 1000)) <= 0) break;
-            } catch (IOException e) {
-                e.printStackTrace();
+        while (cnt > 0) {
+            int bound = (int) Long.min(cnt, taskAtTime);
+
+            List<Future<char[]>> futures = new ArrayList<>();
+            for (int i = 0; i < bound; i++) {
+                futures.add(poolExecutor.submit(createTask(file, start, end)));
+                start = end;
+                end = Long.min(end + chunkSize, file.length());
             }
-            if (matcher.search(buff, size)) {
-                return true;
+            for (Future<char[]> future : futures) {
+                char[] s = future.get();
+                if (s == null) {
+                    continue;
+                }
+                matchedCount += m.search(s);
             }
+            cnt -= bound;
         }
-        return false;
+        System.out.println(file.getPath() + " : " + matchedCount);
+        poolExecutor.shutdown();
+        if(matchedCount > 0) flag = true;
+        return flag;
+    }
+
+    private static char[] processPart(File file, long start, long end) throws IOException {
+
+        RandomAccessFile rFile = null;
+        FileChannel fc = null;
+        try {
+
+            rFile = new RandomAccessFile(file.getPath(),"r");
+            rFile.seek(start);
+            fc = rFile.getChannel();
+            ByteBuffer bb = ByteBuffer.allocate(8192);
+            if(start > end) return null;
+            int size = (int) (end - start);
+            int i = 0;
+
+            if (fc.read(bb) != -1) {
+
+                bb.flip();
+                char[] ret = new char[size];
+                while(bb.hasRemaining()) {
+                    ret[i++] = (char) bb.get();
+                }
+                bb.clear();
+                return ret;
+            }
+            return null;
+        } finally {
+            if(fc != null)
+                fc.close();
+            if(rFile != null)
+                rFile.close();
+        }
+    }
+
+    private static Callable<char[]> createTask(File file, long start, long end) {
+        return new Callable<char[]>() {
+            @Override
+            public char[] call() throws Exception {
+                return processPart(file, start, end);
+            }
+        };
     }
 }
