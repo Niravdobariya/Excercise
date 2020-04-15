@@ -5,12 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 
-
 public class Grep {
 
     static BufferedWriter bw;
     public static void main(String args[]) throws Exception {
-
 
         String pattern = args[0];
         long time = System.currentTimeMillis();
