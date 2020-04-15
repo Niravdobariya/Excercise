@@ -67,7 +67,7 @@ public class Grep {
         ExecutorService poolExecutor = Executors.newFixedThreadPool(poolSize);
         long chunkSize = 8192;
         long cnt = (file.length() + chunkSize - 1) / chunkSize;
-        int taskAtTime = 102400;
+        int taskAtTime = 10240;
         int matchedCount = 0;
         long start = 0;
         long end = Long.min(chunkSize, file.length());
