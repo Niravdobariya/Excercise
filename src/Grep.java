@@ -30,8 +30,6 @@ public class Grep7 {
         }
         poolExecutor.shutdown();
         poolExecutor.awaitTermination(10L, TimeUnit.MINUTES);
-        System.out.println("Time IO : " + timeIO.get());
-        System.out.println("Search IO : " + searchOp.get());
         System.out.println(System.currentTimeMillis() - time);
         bw.flush();
         bw.close();
@@ -69,14 +67,14 @@ public class Grep7 {
         }
     }
     private static boolean fileSearch(File file, Pattern p) throws IOException {
-        RandomAccessFile aFile = new RandomAccessFile(file.getPath(), "r");
-        FileChannel inChannel = aFile.getChannel();
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-        char[] text = new char[1024];
+        RandomAccessFile rFile = new RandomAccessFile(file.getPath(), "r");
+        FileChannel in = rFile.getChannel();
+        ByteBuffer buffer = ByteBuffer.allocate(8192);
+        char[] text = new char[8192];
         int cnt = 0;
         boolean flag = true;
         Matcher m = p.matcher();
-        while(inChannel.read(buffer) > 0)
+        while(in.read(buffer) > 0)
         {
             buffer.flip();
             for (int i = 0; i < buffer.limit(); i++)
@@ -87,9 +85,9 @@ public class Grep7 {
             buffer.clear();
         }
         System.out.println(file.getPath() + " : " + cnt);
-        if(cnt > 0)flag =true;
-        inChannel.close();
-        aFile.close();
+        if(cnt>0)flag =true;
+        in.close();
+        rFile.close();
         return flag;
     }
 
