@@ -22,9 +22,6 @@ public class MyDBMS implements Serializable {
         Integer shardKey = q.id;
         String keyword = q.keyword;
         Gson g = new Gson();
-
-//        System.out.println(shardKey + " " + keyword);
-
         if(shardKey == null) {
             ArrayList<String> result = broadcastQuery(collectionName, keyword);
             return result;
