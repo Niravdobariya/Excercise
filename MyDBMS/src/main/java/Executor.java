@@ -17,21 +17,14 @@ public class Executor {
             fis.close();
             in.close();
         }
-//
-//        String str;
-//        BufferedReader bf  =  new BufferedReader(new FileReader("/Users/niravdobariya/Desktop/enwiki.json"));
-//        while((str = bf.readLine()) != null) {
-////            System.out.println(str);
-//            db.insertDocument("Wikipedia",str);
-//        }
+
+        String str;
+        BufferedReader bf  =  new BufferedReader(new FileReader("/Users/niravdobariya/Desktop/enwiki.json"));
+        while((str = bf.readLine()) != null) {
+            db.insertDocument("Wikipedia",str);
+        }
 
         ArrayList<String> ls = db.query("Wikipedia"," { \"keyword\" : \"form\"} ");
-        /*
-         * 0 34
-         * 1 29
-         * 2 34
-         * */
-//        print(ls);
         FileOutputStream fos = new FileOutputStream(metaFilePath);
         ObjectOutputStream out = new ObjectOutputStream(fos);
         out.writeObject(db);
