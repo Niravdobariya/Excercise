@@ -1,3 +1,5 @@
+
+
 import com.google.gson.Gson;
 
 import java.io.Serializable;
@@ -13,50 +15,47 @@ public class MyDBMS implements Serializable {
 
     public MyDBMS(String path, int noOfShards) {
         this.path = path;
-        shards =  new HashMap<>();
+        shards = new HashMap<>();
         this.noOfShards = noOfShards;
     }
 
     public ArrayList<String> query(String collectionName, String query) {
-        QueryBean q = getShardKey(query);
-        Integer shardKey = q.id;
-        String keyword = q.keyword;
-        Gson g = new Gson();
-        if(shardKey == null) {
-            ArrayList<String> result = broadcastQuery(collectionName, keyword);
-            return result;
+        Map<String, Object> queryMap = (Map) GsonParser.parse(query, Map.class);
+        Double val = (Double) queryMap.get("id");
+        Integer shardKey = val.intValue();
+
+        if (shardKey == null) {
+            return broadcastQuery(collectionName, queryMap.get("keyword"), (String) queryMap.get("indexName"));
         }
         Shard shard = shards.get(shardKey % noOfShards);
-        return shard.getDocument(collectionName, keyword);
+        return shard.getDocument(collectionName, queryMap.get("keyword"), (String) queryMap.get("indexName"));
     }
 
-    public void insertDocument(String collectionName, String document)  {
-        QueryBean q = getShardKey(document);
-        Integer shardKey = (q.id) % noOfShards;
+    public void insertDocument(String collectionName, String document) {
+        Map<String, Object> documentMap = (Map) GsonParser.parse(document, Map.class);
+        Double val = (Double) documentMap.get("id");
+        Integer shardKey = val.intValue();
+
         Shard shard = shards.get(shardKey);
-        if(shard == null) {
+        if (shard == null) {
             shard = new Shard(path, shardKey.toString());
-            shards.put(shardKey,shard);
+            shards.put(shardKey % noOfShards, shard);
         }
-        shard.insertIntoCollection(collectionName,document);
+        shard.insertIntoCollection(collectionName, document);
     }
 
-    private QueryBean getShardKey(String document) {
-        Gson g = new Gson();
-        return g.fromJson(document, QueryBean.class);
-    }
-
-    private ArrayList<String> broadcastQuery(String collectionName, String keyword) {
+    private ArrayList<String> broadcastQuery(String collectionName, Object keyword, String indexName) {
         ArrayList<String> result = new ArrayList<>();
-        if(poolExecutor == null || poolExecutor.isShutdown()) {
+        if (poolExecutor == null || poolExecutor.isShutdown()) {
             poolExecutor = Executors.newFixedThreadPool(3);
         }
         Collection<Shard> values = shards.values();
-        ArrayList<Future<ArrayList<String>>> tasks =  new ArrayList<>();
-        for(Shard s : values) {
+        ArrayList<Future<ArrayList<String>>> tasks = new ArrayList<>();
+        for (Shard s : values) {
             Future task = poolExecutor.submit(new Callable<ArrayList<String>>() {
-                @Override public ArrayList<String> call() {
-                    return s.getDocument(collectionName, keyword);
+                @Override
+                public ArrayList<String> call() {
+                    return s.getDocument(collectionName, keyword, indexName);
                 }
             });
             tasks.add(task);
@@ -64,11 +63,11 @@ public class MyDBMS implements Serializable {
 
         poolExecutor.shutdown();
         try {
-            poolExecutor.awaitTermination(5,TimeUnit.MINUTES);
+            poolExecutor.awaitTermination(5, TimeUnit.MINUTES);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        for(Future<ArrayList<String>> task : tasks) {
+        for (Future<ArrayList<String>> task : tasks) {
             try {
                 ArrayList<String> ls = task.get();
                 System.out.println(ls.size() + " " + task);
@@ -81,7 +80,6 @@ public class MyDBMS implements Serializable {
         }
         return result;
     }
-
 
 
 }

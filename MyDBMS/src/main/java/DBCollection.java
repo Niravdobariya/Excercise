@@ -1,67 +1,89 @@
-import com.google.gson.Gson;
-
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Set;
+import java.nio.channels.FileChannel;
+import java.nio.file.*;
+import java.util.*;
 
 public class DBCollection implements Serializable {
     final String filePath;
     final String collectionName;
-    final Index index;
+    final String dataPath;
+    Map<String, Index<String>> indexes;
+    Map<Integer, Long> position;
     int size;
 
     public DBCollection(String filePath, String collectionName) {
         this.collectionName = collectionName;
         this.filePath = filePath + collectionName + '/';
-        index = new Index(filePath);
+        this.dataPath = this.filePath + "data";
+        position = new HashMap<>();
+        indexes = new HashMap<>();
+        SimpleIndex<String> si = new SimpleIndex<>(this.filePath);
+        TextIndex ti = new TextIndex(this.filePath);
+        indexes.put("id", si);
+        indexes.put("title", ti);
     }
 
     public void insert(String s) {
-        String text = null;
-        Wikipedia w = new Gson().fromJson(s,Wikipedia.class);
-        text = w.getText();
+        writeToFile(s);
+        Map<String, String> wikiJson = (Map<String, String>) GsonParser.parse(s, Map.class);
+        for (Map.Entry entry : wikiJson.entrySet()) {
+            System.out.println(entry.getKey() + " " + entry.getValue());
+        }
+        for (Map.Entry<String, Index<String>> entry : indexes.entrySet()) {
+            Index<String> index = entry.getValue();
+//            System.out.println(entry.getKey() +  " " + wikiJson.get(entry.getKey()));
+            index.insert(wikiJson.get(entry.getKey()), Collections.singleton(size));
+        }
+        size++;
+    }
 
+    public ArrayList<String> getDocumentsByIndex(Object keyword, String indexName) {
+        //        System.out.println(keyword + " " + indexName);
+        Index index = indexes.get(indexName);
+        Set<Integer> lineNumbers = index.get(keyword);
+        if (lineNumbers != null) {
+            for (int i : lineNumbers) {
+                System.out.println(i);
+            }
+        }
+        return readFromFile(lineNumbers);
+    }
+
+    //-----------------------------private methods-----------------------------//
+
+    private void writeToFile(String data) {
         try {
-            String dataPath = filePath + "data";
             File file = new File(dataPath);
-            if(!file.exists()) {
+            if (!file.exists()) {
                 file.getParentFile().mkdirs();
                 Path path = Paths.get(dataPath);
                 Files.createDirectories(path.getParent());
                 Files.createFile(path);
             }
             BufferedWriter bw = new BufferedWriter(new FileWriter(dataPath, true));
-            bw.write(s);
+            position.put(size, file.length());
+            bw.write(data);
             bw.newLine();
             bw.flush();
             bw.close();
-            index.insert(StringUtils.parsedWords(text), size);
-            size++;
         } catch (IOException e) {
             e.printStackTrace();
         }
 
     }
 
-    public ArrayList<String> getDocuments(String keyword) {
-        Set<Integer> lineNumbers = index.get(keyword);
+    private ArrayList<String> readFromFile(Set<Integer> lineNumbers) {
+        if (lineNumbers == null) return null;
         ArrayList<String> documents = new ArrayList<>();
-
         try {
-            String dataPath = filePath + "data";
-            BufferedReader bf = new BufferedReader(new FileReader(dataPath));
-            String line;
-            int n = 0;
-            while((line = bf.readLine()) != null) {
-                if(lineNumbers.contains(n)) {
-                    documents.add(line);
-                }
-                n++;
+            RandomAccessFile rf = new RandomAccessFile(dataPath, "r");
+
+            for (int lineNumber : lineNumbers) {
+                rf.seek(position.get(lineNumber));
+                FileChannel fc = rf.getChannel();
+                String s = rf.readLine();
+                documents.add(s);
             }
-            bf.close();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -69,4 +91,6 @@ public class DBCollection implements Serializable {
         }
         return documents;
     }
+
+
 }

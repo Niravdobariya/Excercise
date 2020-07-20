@@ -1,4 +1,5 @@
 public class Wikipedia {
+
     public String title;
     public String id;
     public Revision revision;
@@ -16,7 +17,6 @@ public class Wikipedia {
         return title;
     }
 
-
     public String getId() {
         return id;
     }
@@ -24,6 +24,5 @@ public class Wikipedia {
     public String getText() {
         return revision.text;
     }
-
 
 }
