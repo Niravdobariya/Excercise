@@ -1,5 +1,4 @@
 public class Wikipedia {
-
     public String title;
     public String id;
     public Revision revision;

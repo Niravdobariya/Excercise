@@ -31,14 +31,12 @@ public class DBCollection implements Serializable {
         }
         for (Map.Entry<String, Index<String>> entry : indexes.entrySet()) {
             Index<String> index = entry.getValue();
-//            System.out.println(entry.getKey() +  " " + wikiJson.get(entry.getKey()));
             index.insert(wikiJson.get(entry.getKey()), Collections.singleton(size));
         }
         size++;
     }
 
     public ArrayList<String> getDocumentsByIndex(Object keyword, String indexName) {
-        //        System.out.println(keyword + " " + indexName);
         Index index = indexes.get(indexName);
         Set<Integer> lineNumbers = index.get(keyword);
         if (lineNumbers != null) {
@@ -91,6 +89,5 @@ public class DBCollection implements Serializable {
         }
         return documents;
     }
-
 
 }
